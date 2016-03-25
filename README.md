@@ -6,3 +6,4 @@ Adds all the data to a database and creates an idex. There is also an example qu
 ## feature_extraction
 This is the interesting file where the predictions are made, using the database created.
 It takes a few minutes to run on my laptop (4GB RAM, i3)
+The score on the private leaderboard is 0.64053.
