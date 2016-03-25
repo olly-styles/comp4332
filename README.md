@@ -1,5 +1,3 @@
-# comp4332
-
 ## create_SQLite 
 Adds all the data to a database and creates an idex. There is also an example query at the bottom. 
 
