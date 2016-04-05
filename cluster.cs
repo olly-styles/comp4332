@@ -12,43 +12,10 @@ namespace clusters
     {
         static void Main(string[] args)
         {
-
-            FileStream fs = new FileStream("clustered", FileMode.Open);
-            StreamReader sr = new StreamReader(fs);
-
-
-            FileStream fs2 = new FileStream("save", FileMode.Create);
-            StreamWriter sw = new StreamWriter(fs2);
-
-            double[] mapping = new double[] { 32, 12.9412, 44, 7.2110, 11, 6.7403, 14, 6.7047, 13, 6.6206, 8, 6.6136, 48, 6.5935, 26, 6.5810, 36, 6.5181, 27, 6.5171, 33, 6.4018, 10, 6.3843, 9, 6.3272, 7, 6.3253, 49, 6.3178, 12, 6.2172, 5, 6.1988, 3, 6.1125, 1, 5.9843, 42, 5.8187, 40, 5.7928, 6, 5.7797, 43, 5.7167, 4, 5.5851, 17, 5.4927, 19, 5.4417, 39, 5.4197, 30, 5.1564, 18, 5.1353, 31, 5.0705, 22, 5.0467, 15, 4.9631, 45, 4.9174, 47, 4.9004, 29, 4.7532, 38, 4.7450, 41, 4.7334, 37, 4.7074, 46, 4.7051, 2, 4.7043, 34, 4.6993, 23, 4.6412, 21, 4.6105, 0, 4.4549, 16, 4.4029, 20, 4.2553, 28, 4.2450, 25, 4.1949, 24, 3.6278, 35, 3.1137 };
-
-            Dictionary<int,double> map = new Dictionary<int,double>();
-            for (int i = 0; i < mapping.Length; i+=2)
-            {
-                map.Add((int)mapping[i],mapping[i+1]);
-            }
-
-            Task t = null;
-            while (sr.EndOfStream == false)
-            {
-                string s = sr.ReadLine();
-
-                string[] ss = s.Split(new char[] { ',' });
-                if (t != null)
-                {
-                    t.Wait();
-                }
-                t = sw.WriteLineAsync(String.Format("{0},{1}", ss[0], map[ Convert.ToInt32(ss[1]) ].ToString()));
-            }
-
-            t.Wait();
-
-            sw.Close();
-            fs2.Close();
-
-            fs.Close();
-            sr.Close();
-
+            build();
+            kmeans("termfreq.csv", "idf.csv", 50,10,6000,"clustered.csv");
+            score();
+            
             Console.WriteLine("Done");
             Console.ReadLine();
 
@@ -68,7 +35,7 @@ namespace clusters
             }
 
 
-            FileStream fs = new FileStream(@"C:\Users\Malcolm\Documents\Visual Studio 2012\Projects\okaymeansno\okaymeansno\bin\Debug\clustered", FileMode.Open);
+            FileStream fs = new FileStream(@"clustered.csv", FileMode.Open);
             StreamReader sr = new StreamReader(fs);
 
             while (sr.EndOfStream == false)
@@ -83,7 +50,7 @@ namespace clusters
 
 
 
-            fs = new FileStream(@"C:\Users\Malcolm\Documents\HKUST\COMP4332\outcomes.csv", FileMode.Open);
+            fs = new FileStream(@"outcomes.csv", FileMode.Open);
             sr = new StreamReader(fs);
 
 
@@ -128,7 +95,7 @@ namespace clusters
 
         static void sample()
         {
-            FileStream fs = new FileStream("clustered", FileMode.Open);
+            FileStream fs = new FileStream("bestcluster.csv", FileMode.Open);
             StreamReader sr = new StreamReader(fs);
 
             int sample = 11;
@@ -150,7 +117,7 @@ namespace clusters
             fs.Close();
 
 
-            fs = new FileStream(@"C:\ProgramData\MySQL\MySQL Server 5.7\Uploads\essays.csv", FileMode.Open);
+            fs = new FileStream(@"essays.csv", FileMode.Open);
             sr = new StreamReader(fs);
 
 
@@ -229,8 +196,6 @@ namespace clusters
         static void kmeans(string saves, string idfsaves, int k, int iter, int samplesize, string output)
         {
             string[] allprojects = allProjectIds(saves);
-            //548862 projects in total
-
 
             Random rand = new Random();
 
@@ -363,7 +328,7 @@ namespace clusters
                     Console.WriteLine("New best! Cluster {0}", getBest);
                 }
 
-                FileStream bfs = new FileStream("cluster" + getBest, FileMode.Create);
+                FileStream bfs = new FileStream("bestcluster.csv", FileMode.Create);
                 StreamWriter bsw = new StreamWriter(bfs);
 
                 for (int i = 0; i < k; i++)
@@ -444,6 +409,7 @@ namespace clusters
             fs.Close();
         }
 
+        //get a list of all the projects (useful for normalisiation
         static string[] allProjectIds(string filename)
         {
 
@@ -466,6 +432,7 @@ namespace clusters
             return pids.ToArray();
         }
 
+        //cosine similarity between two document vectors
         static double cossim(List<Tuple<string, double>> a, Dictionary<string, double> b)
         {
             double dotp=0, ma=0, mb=0;
@@ -491,7 +458,8 @@ namespace clusters
 
         }
 
-
+        //sort each word by its idf score, this function is purely for interest to see the most important words
+        //note that because words such as "the" "and" "a" have an idf score of 0, stop word removal is not neccesary
         static void sorted()
         {
             Dictionary<string, double> h = loadIDF("saveIDF",1000);
@@ -514,23 +482,22 @@ namespace clusters
         }
 
 
+        //function counts term frequency for each word in each essay, and saves them in the format:
+        //projectid, word1, freq1, word2, freq2
+        //in termfreq.csv
+        //the document frequencys are saved in idf.csv
         static void build()
         {
 
             Dictionary<string, int> df = new System.Collections.Generic.Dictionary<string, int>();
-            //Dictionary<string, Dictionary<string, int>> tf = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, int>>();
-
-            FileStream FS = new FileStream(@"C:\ProgramData\MySQL\MySQL Server 5.7\Uploads\essays.csv", FileMode.Open);
+            
+            FileStream FS = new FileStream(@"essays.csv", FileMode.Open);
             StreamReader sr = new StreamReader(FS);
 
-            FileStream fs2 = new FileStream("saves", FileMode.Create);
+            FileStream fs2 = new FileStream("termfreq.csv", FileMode.Create);
             StreamWriter sw = new StreamWriter(fs2);
 
             
-            
-
-
-
             double i = 0;
             double percent = -1;
 
@@ -542,8 +509,7 @@ namespace clusters
             do
             {
 
-
-
+                //parse the input csv, essays.csv, with esacpe char = \, seperator = , and string delimiter = "
                 bool instring = false;
                 bool inescape = false;
                 int field = 1;
@@ -623,11 +589,6 @@ namespace clusters
                             percent = p10;
                             Console.WriteLine("{0}%", percent);
 
-                            //if (percent > 0 && percent % 10 == 0 && percent < 100)
-                            //{
-                            //    save(tf, "save" + percent);
-                            //    tf.Clear();
-                            //}
                         }
 
                         StringBuilder fileline = new StringBuilder();
@@ -646,8 +607,6 @@ namespace clusters
                         }
 
                         sw.WriteLine(fileline.ToString());
-                        //tf.Add(key.ToString(), myTFs);
-                        //Console.WriteLine(i);
 
 
                         break;
@@ -663,14 +622,13 @@ namespace clusters
             sw.Close();
             fs2.Close();
 
-            save(df, "saveIDF");
+            save(df, "idf.csv");
 
-
-            //Console.WriteLine(i);
             sr.Close();
             FS.Close();
         }
 
+        //load the idf and tf into dictionaries (hashtables)
         static Dictionary<string, Dictionary<string,double>> load(string f, int n, int skip, Dictionary<string, double> idf)
         {
             FileStream fs = new FileStream(f, FileMode.Open);
@@ -716,7 +674,7 @@ namespace clusters
             return h;
         }
 
-
+        //load a random subset of the document term frequencies into a dictionary
         static Dictionary<string, Dictionary<string, double>> loadR(string f, int n, int max, Dictionary<string, double> idf)
         {
             //list of all possible lines
@@ -786,6 +744,7 @@ namespace clusters
             return h;
         }
 
+        //load the idf values for all words
         static Dictionary<string, double> loadIDF(string f, int n)
         {
             FileStream fs = new FileStream(f, FileMode.Open);
